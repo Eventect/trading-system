@@ -1,25 +1,19 @@
 # config/strategies.yaml
 strategies:
-  # MONTHLY - Your backtest frequency
   - name: vol_regime_monthly
     class: VolatilityRegimeStrategy
     module: strategies.volatility_regime
     enabled: true
-    rebalance_frequency: monthly
+    rebalance_frequency: monthly  # ← Configurable
     account:
-      api_key_env: PKLMWSGCO4WSSTAA3P77WPF355
-      secret_key_env: GU2o68MhZHKo7i8x93srvneCNwwVVR5nYrzMr6R3fULf
-      paper_env: PA3ZE9ISKS3V
-    capital: 10000  # Paper money
+      api_key_env: ALPACA_VOL1_API_KEY
+      secret_key_env: ALPACA_VOL1_SECRET_KEY
 
-  # WEEKLY - Recommended to test
   - name: vol_regime_weekly
     class: VolatilityRegimeStrategy
     module: strategies.volatility_regime
     enabled: true
-    rebalance_frequency: weekly
+    rebalance_frequency: weekly  # ← Test this too
     account:
-      api_key_env: PKAMRF222JA2CBSJ7OANGKDLKK
-      secret_key_env: 55kVR6J7GcXGqFff627xbaL3rUDUGHaoqfPFH87z2W5a
-      paper_env: PA3XZCW28HAE
-    capital: 10000
+      api_key_env: ALPACA_VOL2_API_KEY
+      secret_key_env: ALPACA_VOL2_SECRET_KEY
