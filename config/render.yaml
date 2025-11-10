@@ -1,0 +1,41 @@
+# render.yaml
+services:
+  - type: worker
+    name: trading-system
+    env: python
+    runtime: python-3.11
+    plan: starter  # $7/month
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+
+    # Persistent disk for state files
+    disk:
+      name: trading-state
+      mountPath: /data
+      sizeGB: 1
+
+    # Environment variables
+    envVars:
+      # Strategy 1 - Volatility Regime
+      - key: ALPACA_VOL1_API_KEY
+        sync: false
+      - key: ALPACA_VOL1_SECRET_KEY
+        sync: false
+      - key: ALPACA_VOL1_PAPER
+        value: "true"
+
+      # Email settings (optional)
+      - key: SMTP_SERVER
+        value: "smtp.gmail.com"
+      - key: SMTP_PORT
+        value: "587"
+      - key: SENDER_EMAIL
+        sync: false
+      - key: SENDER_PASSWORD
+        sync: false  # Gmail App Password
+      - key: RECIPIENT_EMAIL
+        sync: false
+
+      # Timezone (server runs in UTC, code handles ET)
+      - key: TZ
+        value: "UTC"

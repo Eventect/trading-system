@@ -1,0 +1,22 @@
+# config/strategies.yaml
+strategies:
+  - name: vol_regime_account1
+    class: VolatilityRegimeStrategy
+    module: strategies.volatility_regime
+    enabled: true
+    account:
+      api_key_env: ALPACA_VOL1_API_KEY
+      secret_key_env: ALPACA_VOL1_SECRET_KEY
+      paper_env: ALPACA_VOL1_PAPER
+    capital: 1500  # For reference
+
+  # Add more strategies here when ready
+  # - name: vol_regime_account2
+  #   class: VolatilityRegimeStrategy
+  #   module: strategies.volatility_regime
+  #   enabled: false
+  #   account:
+  #     api_key_env: ALPACA_VOL2_API_KEY
+  #     secret_key_env: ALPACA_VOL2_SECRET_KEY
+  #     paper_env: ALPACA_VOL2_PAPER
+  #   capital: 1500

@@ -1,0 +1,36 @@
+# .gitignore
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+*.so
+*.egg
+*.egg-info/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment & Secrets
+.env
+.env.local
+
+# Local Data
+data/*.json
+data/*.log
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+test_local.py
+tests/
+.pytest_cache/
+.coverage

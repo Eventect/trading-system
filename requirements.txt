@@ -1,0 +1,16 @@
+# requirements.txt
+
+# Production
+alpaca-py==0.43.2
+numpy==2.3.4
+pandas==2.3.3
+pytz==2025.2
+pyyaml==6.0.3
+python-dateutil==2.9.0.post0
+requests==2.32.5
+
+# Development dependencies (only for local)
+python-dotenv==1.2.1  # Load .env files locally
+pytest==9.0.0        # Unit testing
+pytest-cov==7.0.0     # Test coverage
+ipython==9.7.0       # Better Python shell for debugging
