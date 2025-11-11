@@ -2,7 +2,7 @@
 import os
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import yaml
 from importlib import import_module
 
@@ -53,16 +53,7 @@ def create_strategy(strategy_config, broker, data_provider):
     """Create strategy instance from config"""
     module = import_module(strategy_config['module'])
     strategy_class = getattr(module, strategy_config['class'])
-
-    # Pass rebalance_frequency if specified in config
-    if 'rebalance_frequency' in strategy_config:
-        return strategy_class(
-            broker,
-            data_provider,
-            rebalance_frequency=strategy_config['rebalance_frequency']
-        )
-    else:
-        return strategy_class(broker, data_provider)
+    return strategy_class(broker, data_provider)
 
 
 def main():
@@ -98,12 +89,10 @@ def main():
             strategy = create_strategy(config_item, broker, data_provider)
             strategy.initialize()
             strategies.append(strategy)
-
-            freq = config_item.get('rebalance_frequency', 'monthly')
-            logger.info(f"✓ {strategy.name} initialized (frequency: {freq})")
-            email_logger.add_log(f"✓ {strategy.name} initialized ({freq})")
+            logger.info(f"✓ {strategy.name} initialized successfully")
+            email_logger.add_log(f"✓ {strategy.name} initialized")
         except Exception as e:
-            logger.error(f"✗ {config_item['name']} initialization failed: {e}", exc_info=True)
+            logger.error(f"✗ {config_item['name']} initialization failed: {e}")
             email_logger.add_log(f"✗ {config_item['name']} failed: {e}")
 
     if not strategies:
@@ -113,10 +102,10 @@ def main():
     logger.info("=" * 70)
     logger.info(f"{len(strategies)} strategies ready")
     logger.info("Checking for rebalancing opportunities every minute...")
-    logger.info("Target execution time: 3:30 PM ET")
+    logger.info("Target execution time: 3:30 PM ET (month-end)")
     logger.info("=" * 70)
 
-    # Track last email date
+    # Track last execution date for daily email
     last_email_date = None
 
     # Main loop - check every minute
@@ -129,11 +118,11 @@ def main():
             # Heartbeat every 30 minutes
             if iteration % 30 == 1:
                 logger.info(
-                    f"[Heartbeat] {market_time.strftime('%Y-%m-%d %H:%M:%S %Z')} | "
+                    f"[Heartbeat] Market time: {market_time.strftime('%Y-%m-%d %H:%M:%S %Z')} | "
                     f"{len(strategies)} strategies active"
                 )
 
-            # Execute strategies at 3:30 PM ET
+            # Check if it's time to execute (3:30 PM ET on trading days)
             if market_calendar.is_time_to_rebalance():
                 logger.info("=" * 70)
                 logger.info(f"REBALANCE CHECK: {market_time.strftime('%Y-%m-%d %H:%M:%S %Z')}")
@@ -143,12 +132,12 @@ def main():
                     try:
                         executed = strategy.execute()
                         if executed:
-                            email_logger.add_log(f"✓ {strategy.name}: Rebalanced")
+                            email_logger.add_log(f"{strategy.name}: Rebalanced successfully")
                         else:
-                            email_logger.add_log(f"○ {strategy.name}: No rebalance needed")
+                            email_logger.add_log(f"{strategy.name}: No rebalance needed")
                     except Exception as e:
                         logger.error(f"Strategy {strategy.name} error: {e}", exc_info=True)
-                        email_logger.add_log(f"✗ {strategy.name}: ERROR - {e}")
+                        email_logger.add_log(f"{strategy.name}: ERROR - {e}")
 
             # Send daily email at 5 PM ET
             if market_time.hour == 17 and market_time.minute == 0:
@@ -158,7 +147,7 @@ def main():
                     last_email_date = today
 
             # Sleep until next minute
-            time.sleep(60)
+            time.sleep(market_calendar.time_until_next_check())
 
         except KeyboardInterrupt:
             logger.info("Shutting down trading system...")

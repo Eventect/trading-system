@@ -6,6 +6,7 @@ strategies:
     module: strategies.volatility_regime
     enabled: true
     rebalance_frequency: monthly
+    use_fractional: true
     account:
       api_key_env: ALPACA_VOL_MONTHLY_API_KEY
       secret_key_env: ALPACA_VOL_MONTHLY_SECRET_KEY
@@ -18,6 +19,7 @@ strategies:
     module: strategies.volatility_regime
     enabled: true
     rebalance_frequency: weekly
+    use_fractional: true
     account:
       api_key_env: ALPACA_VOL_WEEKLY_API_KEY
       secret_key_env: ALPACA_VOL_WEEKLY_SECRET_KEY
