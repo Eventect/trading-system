@@ -53,7 +53,8 @@ def create_strategy(strategy_config, broker, data_provider):
     """Create strategy instance from config"""
     module = import_module(strategy_config['module'])
     strategy_class = getattr(module, strategy_config['class'])
-    return strategy_class(broker, data_provider)
+    rebalance_frequency = strategy_config.get('rebalance_frequency', 'monthly')
+    return strategy_class(broker, data_provider, rebalance_frequency=rebalance_frequency)
 
 
 def main():
