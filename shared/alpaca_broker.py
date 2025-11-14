@@ -60,6 +60,52 @@ class AlpacaBroker:
         except:
             return None
 
+    def get_portfolio_weights(self) -> dict:
+        """
+        Get current portfolio allocation as weights (0.0 to 1.0)
+        Returns: {symbol: weight, ...}
+        Example: {'UPRO': 1.0} or {'SPY': 0.6, 'SH': 0.4}
+        """
+        try:
+            positions = self.get_positions()
+            account = self.get_account()
+            equity = float(account.equity)
+
+            if not positions or equity <= 0:
+                return {}
+
+            weights = {}
+            for pos in positions:
+                symbol = pos.symbol
+                position_value = float(pos.market_value)
+                weight = position_value / equity
+                if weight > 0.001:  # Only include positions > 0.1%
+                    weights[symbol] = weight
+
+            return weights
+
+        except Exception as e:
+            self.logger.error(f"Failed to get portfolio weights: {e}")
+            return {}
+
+    def liquidate_position(self, symbol: str):
+        """Close a specific position"""
+        try:
+            position = self.get_position(symbol)
+            if not position:
+                self.logger.debug(f"No position to liquidate for {symbol}")
+                return
+
+            self.trading_client.close_position(symbol)
+            self.logger.info(f"Liquidated {symbol}")
+
+            # Wait for order to complete
+            self._wait_for_position_closure(symbols=[symbol])
+
+        except Exception as e:
+            self.logger.error(f"Failed to liquidate {symbol}: {e}")
+            raise
+
     def liquidate_all(self):
         """Close all positions and wait for orders to complete"""
         try:
@@ -74,22 +120,36 @@ class AlpacaBroker:
             self.logger.error(f"Liquidation error: {e}")
             raise
 
-    def _wait_for_position_closure(self, max_wait_seconds: int = 30, check_interval: float = 0.5):
+    def _wait_for_position_closure(self, symbols: list = None, max_wait_seconds: int = 30, check_interval: float = 0.5):
         """
-        Wait for all liquidation orders to complete
+        Wait for liquidation orders to complete
         Prevents wash trade detection by ensuring positions are fully closed
         before placing new orders
+
+        Args:
+            symbols: List of symbols to wait for closure. If None, waits for all positions.
+            max_wait_seconds: Max time to wait before timeout
+            check_interval: How often to check position status
         """
         start_time = time.time()
 
         while time.time() - start_time < max_wait_seconds:
             try:
                 positions = self.get_positions()
+                current_symbols = {pos.symbol for pos in positions}
 
-                # If no positions remain, we're done
-                if not positions:
-                    self.logger.info("All positions closed successfully")
-                    return
+                # Determine what we're waiting for
+                if symbols is None:
+                    # Waiting for all positions to close
+                    if not positions:
+                        self.logger.info("All positions closed successfully")
+                        return
+                else:
+                    # Waiting for specific symbols to close
+                    remaining = current_symbols & set(symbols)
+                    if not remaining:
+                        self.logger.info(f"Positions closed for {symbols}")
+                        return
 
                 time.sleep(check_interval)
 

@@ -104,15 +104,52 @@ class BaseStrategy(ABC):
             return False
 
     def execute_trades(self, target_allocation: Dict[str, float]):
-        """Execute trades to reach target allocation"""
-        # Liquidate current positions
-        self.broker.liquidate_all()
+        """
+        Execute trades to reach target allocation
+        Smart rebalancing: only trades what's necessary
+        """
+        # Get current portfolio weights
+        current_weights = self.broker.get_portfolio_weights()
 
-        # Add brief delay to ensure liquidation is fully processed
-        # Prevents Alpaca wash trade detection when re-entering same symbols
-        time.sleep(1)
+        # Normalize target allocation (ensure sums to ~1.0)
+        target_total = sum(target_allocation.values())
+        if target_total > 0:
+            target_allocation = {s: w / target_total for s, w in target_allocation.items()}
 
-        # Enter new positions
-        for symbol, weight in target_allocation.items():
-            if weight > 0:
-                self.broker.set_holdings(symbol, weight)
+        self.logger.info(f"Current allocation: {current_weights}")
+        self.logger.info(f"Target allocation: {target_allocation}")
+
+        # Find positions to liquidate (in current but not in target, or weight = 0)
+        to_liquidate = []
+        for symbol in current_weights.keys():
+            target_weight = target_allocation.get(symbol, 0.0)
+            if target_weight == 0:
+                to_liquidate.append(symbol)
+
+        # Find positions to buy/adjust (in target allocation)
+        to_adjust = {}
+        for symbol, target_weight in target_allocation.items():
+            if target_weight > 0:
+                current_weight = current_weights.get(symbol, 0.0)
+                # Only adjust if weight differs by more than 0.1%
+                if abs(current_weight - target_weight) > 0.001:
+                    to_adjust[symbol] = target_weight
+
+        # Execute liquidations first
+        if to_liquidate:
+            self.logger.info(f"Liquidating: {to_liquidate}")
+            for symbol in to_liquidate:
+                self.broker.liquidate_position(symbol)
+
+            # Wait a bit after liquidations
+            time.sleep(1)
+
+        # Execute new positions/adjustments
+        if to_adjust:
+            self.logger.info(f"Adjusting positions: {to_adjust}")
+            for symbol, target_weight in to_adjust.items():
+                self.broker.set_holdings(symbol, target_weight)
+        elif not to_liquidate:
+            self.logger.info("No rebalancing needed - portfolio matches target allocation")
+
+        self.logger.info("Rebalancing complete")
