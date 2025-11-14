@@ -5,6 +5,7 @@ import logging
 import json
 import os
 from typing import Dict, Optional
+import time
 
 
 class BaseStrategy(ABC):
@@ -106,6 +107,10 @@ class BaseStrategy(ABC):
         """Execute trades to reach target allocation"""
         # Liquidate current positions
         self.broker.liquidate_all()
+
+        # Add brief delay to ensure liquidation is fully processed
+        # Prevents Alpaca wash trade detection when re-entering same symbols
+        time.sleep(1)
 
         # Enter new positions
         for symbol, weight in target_allocation.items():

@@ -1,12 +1,13 @@
 # shared/alpaca_broker.py
 from alpaca.trading.client import TradingClient
 from alpaca.trading.requests import MarketOrderRequest
-from alpaca.trading.enums import OrderSide, TimeInForce
+from alpaca.trading.enums import OrderSide, TimeInForce, OrderStatus
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockLatestQuoteRequest
 from alpaca.data.enums import DataFeed
 import logging
 from typing import Optional
+import time
 
 
 class AlpacaBroker:
@@ -60,13 +61,49 @@ class AlpacaBroker:
             return None
 
     def liquidate_all(self):
-        """Close all positions"""
+        """Close all positions and wait for orders to complete"""
         try:
             self.trading_client.close_all_positions(cancel_orders=True)
-            self.logger.info("All positions liquidated")
+            self.logger.info("Liquidation initiated, waiting for orders to complete...")
+
+            # Wait for all liquidation orders to complete to avoid wash trade detection
+            self._wait_for_position_closure()
+
+            self.logger.info("All positions liquidated and orders completed")
         except Exception as e:
             self.logger.error(f"Liquidation error: {e}")
             raise
+
+    def _wait_for_position_closure(self, max_wait_seconds: int = 30, check_interval: float = 0.5):
+        """
+        Wait for all liquidation orders to complete
+        Prevents wash trade detection by ensuring positions are fully closed
+        before placing new orders
+        """
+        start_time = time.time()
+
+        while time.time() - start_time < max_wait_seconds:
+            try:
+                positions = self.get_positions()
+
+                # If no positions remain, we're done
+                if not positions:
+                    self.logger.info("All positions closed successfully")
+                    return
+
+                time.sleep(check_interval)
+
+            except Exception as e:
+                self.logger.warning(f"Error checking positions: {e}")
+                time.sleep(check_interval)
+
+        # Timeout - log warning but continue
+        remaining_positions = self.get_positions()
+        if remaining_positions:
+            self.logger.warning(
+                f"Timeout waiting for position closure. Still have {len(remaining_positions)} positions. "
+                f"Proceeding anyway, but wash trade errors may occur."
+            )
 
     def get_current_price(self, symbol: str) -> Optional[float]:
         """
